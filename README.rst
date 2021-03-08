@@ -2,8 +2,8 @@ Actix JWT Validator Middleware
 ==============================
 
 Simple ``actix`` middleware that takes a ``JWT`` bearer token from the
-``authorization`` HTTP header and validates it against some
-``JWKS``.
+``authorization`` HTTP header and validates it against some ``JWKS``.
+
 
 Example
 -------
@@ -35,7 +35,8 @@ Example
      .await
    }
 
+
 TODO
 ----
 
-* User object extraction from ``JWT`` payload also in this library
+* User object extraction from ``JWT`` payload also in this library?
