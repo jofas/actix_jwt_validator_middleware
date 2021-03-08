@@ -6,8 +6,8 @@ use actix_web_httpauth::extractors::bearer::Config as BearerConfig;
 use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web_httpauth::middleware::HttpAuthentication;
 
-use jwks_client::keyset::KeyStore;
 use jwks_client::error::Error as JwksError;
+use jwks_client::keyset::KeyStore;
 
 use jonases_tracing_util::{log_simple_err, log_simple_err_callback};
 
@@ -15,7 +15,9 @@ use futures::future::{ready, Ready};
 
 use std::sync::Arc;
 
-pub async fn init_key_set(certs_endpoint: &str) -> Result<Arc<KeyStore>, JwksError> {
+pub async fn init_key_set(
+  certs_endpoint: &str,
+) -> Result<Arc<KeyStore>, JwksError> {
   Ok(Arc::new(KeyStore::new_from(&certs_endpoint).await?))
 }
 
