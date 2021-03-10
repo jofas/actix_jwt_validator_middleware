@@ -1,3 +1,5 @@
+pub use jwks_client;
+
 use actix_web::Error as ActixError;
 use actix_web::{dev::ServiceRequest, web};
 
