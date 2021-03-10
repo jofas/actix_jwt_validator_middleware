@@ -39,4 +39,5 @@ Example
 TODO
 ----
 
-* User object extraction from ``JWT`` payload also in this library?
+* Own KeyStore wrapped around the ``jwk_client`` one with ``Arc`` to
+  make referencing thread-safe
