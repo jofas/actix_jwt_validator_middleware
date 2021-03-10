@@ -1,11 +1,16 @@
+#![feature(try_trait)]
+
 pub use jwks_client;
 
+use actix_web::dev::{self, HttpResponseBuilder, ServiceRequest};
+use actix_web::http::StatusCode;
 use actix_web::Error as ActixError;
-use actix_web::{dev::ServiceRequest, web};
+use actix_web::{web, FromRequest, HttpRequest, HttpResponse};
 
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use actix_web_httpauth::extractors::bearer::Config as BearerConfig;
 use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web_httpauth::headers::www_authenticate::bearer::Bearer;
 use actix_web_httpauth::middleware::HttpAuthentication;
 
 use jwks_client::error::Error as JwksError;
@@ -15,6 +20,11 @@ use jonases_tracing_util::{log_simple_err, log_simple_err_callback};
 
 use futures::future::{ready, Ready};
 
+use serde::{Deserialize, Serialize};
+
+use display_json::DisplayAsJson;
+
+use std::option::NoneError;
 use std::sync::Arc;
 
 pub async fn init_key_set(
@@ -60,5 +70,93 @@ fn auth(
       log_simple_err("could not verify user access token", &e);
       Err(AuthenticationError::from(config).into())
     }
+  }
+}
+
+#[derive(Serialize, Deserialize, DisplayAsJson)]
+pub struct User {
+  pub name: String,
+  #[serde(alias = "preferred_username")]
+  pub username: String,
+  pub email: String,
+}
+
+impl User {
+  fn init(
+    req: &HttpRequest,
+    payload: &mut dev::Payload,
+  ) -> Result<User, Error> {
+    let bearer = BearerAuth::from_request(req, payload)
+      .into_inner()
+      .map_err(log_simple_err_callback(
+        "could not retrieve BearerAuth from request",
+      ))?;
+
+    let key_set = req
+      .app_data::<web::Data<Arc<KeyStore>>>()
+      .ok_or(NoneError)
+      .map_err(log_simple_err_callback(
+        "could not retrieve key_set",
+      ))?;
+
+    let jwt = key_set.decode(bearer.token()).map_err(
+      log_simple_err_callback("could not decode user access token"),
+    )?;
+
+    let user =
+      jwt.payload().into().map_err(log_simple_err_callback(
+        "could not parse user access token into user object",
+      ))?;
+
+    Ok(user)
+  }
+}
+
+impl FromRequest for User {
+  type Config = ();
+  type Future = Ready<Result<Self, Self::Error>>;
+  type Error = Error;
+
+  fn from_request(
+    req: &HttpRequest,
+    payload: &mut dev::Payload,
+  ) -> Self::Future {
+    ready(User::init(req, payload))
+  }
+}
+
+#[derive(Debug, Serialize, DisplayAsJson)]
+pub enum Error {
+  HeaderNotFound,
+  KeyStoreNotFound,
+  JwksError,
+}
+
+impl From<AuthenticationError<Bearer>> for Error {
+  fn from(_: AuthenticationError<Bearer>) -> Self {
+    Self::HeaderNotFound
+  }
+}
+
+impl From<NoneError> for Error {
+  fn from(_: NoneError) -> Self {
+    Self::KeyStoreNotFound
+  }
+}
+
+impl From<JwksError> for Error {
+  fn from(_: JwksError) -> Self {
+    Self::JwksError
+  }
+}
+
+impl actix_web::error::ResponseError for Error {
+  fn error_response(&self) -> HttpResponse {
+    let mut res = HttpResponseBuilder::new(self.status_code());
+    res.json(self)
+  }
+
+  fn status_code(&self) -> StatusCode {
+    StatusCode::INTERNAL_SERVER_ERROR
   }
 }
