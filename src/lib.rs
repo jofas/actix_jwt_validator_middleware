@@ -99,7 +99,16 @@ impl User {
         "could not retrieve key_set",
       ))?;
 
-    let jwt = key_set.decode(bearer.token()).map_err(
+    Self::decode(bearer.token(), &key_set)
+  }
+
+  pub fn try_from_token(token: &str) -> Result<User, Error> {
+    let key_set = KeyStore::new();
+    Self::decode(token, &key_set)
+  }
+
+  fn decode(token: &str, key_set: &KeyStore) -> Result<User, Error> {
+    let jwt = key_set.decode(token).map_err(
       log_simple_err_callback("could not decode user access token"),
     )?;
 
