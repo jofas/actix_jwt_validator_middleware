@@ -17,6 +17,7 @@ use jwks_client::error::Error as JwksError;
 use jwks_client::keyset::KeyStore;
 
 use jonases_tracing_util::{log_simple_err, log_simple_err_callback};
+use jonases_tracing_util::tracing::{event, Level};
 
 use futures::future::{ready, Ready};
 
@@ -65,7 +66,21 @@ fn auth(
     .map_err(log_simple_err_callback("could not retrieve key_set"))?;
 
   match key_set.verify(bearer.token()) {
-    Ok(_jwt) => Ok(req),
+    Ok(_jwt) => {
+      match User::decode(bearer.token(), &key_set) {
+        Ok(user) => {
+          event!(Level::INFO, %user);
+          Ok(req)
+        }
+        Err(e) => {
+          log_simple_err(
+            "could not decode user from access token",
+            &e
+          );
+          Err(AuthenticationError::from(config).into())
+        }
+      }
+    }
     Err(e) => {
       log_simple_err("could not verify user access token", &e);
       Err(AuthenticationError::from(config).into())
