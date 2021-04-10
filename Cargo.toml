@@ -3,6 +3,11 @@ name = "actix-jwt-validator-middleware"
 version = "0.1.0"
 authors = ["jofas <jonas@fc-web.de>"]
 edition = "2018"
+license = "MIT"
+readme = "README.rst"
+description = "Middleware and extractor for JWT bearer tokens for the actix-web framework"
+homepage = "https://github.com/jofas/actix_jwt_validator_middleware"
+repository = "https://github.com/jofas/actix_jwt_validator_middleware"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
