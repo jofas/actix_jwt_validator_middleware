@@ -1,4 +1,4 @@
-#![feature(try_trait)]
+#![feature(try_trait_v2)]
 
 pub use jwks_client;
 
@@ -16,8 +16,8 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use jwks_client::error::Error as JwksError;
 use jwks_client::keyset::KeyStore;
 
-use jonases_tracing_util::{log_simple_err, log_simple_err_callback};
 use jonases_tracing_util::tracing::{event, Level};
+use jonases_tracing_util::{log_simple_err, log_simple_err_callback};
 
 use futures::future::{ready, Ready};
 
@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 
 use display_json::DisplayAsJson;
 
-use std::option::NoneError;
 use std::sync::Arc;
 
 pub async fn init_key_set(
@@ -66,21 +65,16 @@ fn auth(
     .map_err(log_simple_err_callback("could not retrieve key_set"))?;
 
   match key_set.verify(bearer.token()) {
-    Ok(_jwt) => {
-      match User::decode(bearer.token(), &key_set) {
-        Ok(user) => {
-          event!(Level::INFO, %user);
-          Ok(req)
-        }
-        Err(e) => {
-          log_simple_err(
-            "could not decode user from access token",
-            &e
-          );
-          Err(AuthenticationError::from(config).into())
-        }
+    Ok(_jwt) => match User::decode(bearer.token(), &key_set) {
+      Ok(user) => {
+        event!(Level::INFO, %user);
+        Ok(req)
       }
-    }
+      Err(e) => {
+        log_simple_err("could not decode user from access token", &e);
+        Err(AuthenticationError::from(config).into())
+      }
+    },
     Err(e) => {
       log_simple_err("could not verify user access token", &e);
       Err(AuthenticationError::from(config).into())
@@ -109,7 +103,7 @@ impl User {
 
     let key_set = req
       .app_data::<web::Data<Arc<KeyStore>>>()
-      .ok_or(NoneError)
+      .ok_or(Error::KeyStoreNotFound)
       .map_err(log_simple_err_callback(
         "could not retrieve key_set",
       ))?;
@@ -159,12 +153,6 @@ pub enum Error {
 impl From<AuthenticationError<Bearer>> for Error {
   fn from(_: AuthenticationError<Bearer>) -> Self {
     Self::HeaderNotFound
-  }
-}
-
-impl From<NoneError> for Error {
-  fn from(_: NoneError) -> Self {
-    Self::KeyStoreNotFound
   }
 }
 

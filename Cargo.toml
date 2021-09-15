@@ -1,10 +1,10 @@
 [package]
 name = "actix-jwt-validator-middleware"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["jofas <jonas@fc-web.de>"]
 edition = "2018"
 license = "MIT"
-readme = "README.rst"
+readme = "README.md"
 description = "Middleware and extractor for JWT bearer tokens for the actix-web framework"
 homepage = "https://github.com/jofas/actix_jwt_validator_middleware"
 repository = "https://github.com/jofas/actix_jwt_validator_middleware"
