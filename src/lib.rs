@@ -1,5 +1,3 @@
-#![feature(try_trait_v2)]
-
 pub use jwks_client;
 
 use actix_web::dev::{self, HttpResponseBuilder, ServiceRequest};
